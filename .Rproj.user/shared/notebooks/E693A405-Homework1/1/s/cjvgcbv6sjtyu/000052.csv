@@ -1,0 +1,5 @@
+"0","trial_rs <- c(-.2, .2, 2, 3, -3)"
+"0","cols <- c(""red4"", ""green3"", ""green4"", ""purple"")"
+"0",""
+"0","par(mfrow=c(1,2))"
+"0","plot(disc_log_time(100, 10, 0, 30), type = 'l', main = ""Variable r, N0=10, K=30"", ylim=c(-10, 50)) # original situation"

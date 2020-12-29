@@ -1,0 +1,70 @@
+#Randomly sample scaffolds
+#eventually move to reproducable script on TACC.... 
+scaffold_list <- read.table('chrs_S17465.txt', stringsAsFactors = F) #output from ancient-only ANGSD
+site_list <- read.table('sites_S17466.txt', stringsAsFactors = F) #output from ancient-only ANGSD
+weights <- as.data.frame(table(site_list$V1)) #create a dataframe of site frequency by scaffold
+weights <- weights[match(scaffold_list$V1, weights$Var1),] #make sure the order is correct 
+num_sites <- sum(weights$Freq) #how many sites are there?
+probs <- weights$Freq/num_sites #determine scaffold weighting by number of sites
+
+
+pick <- floor(nrow(scaffold_list)*0.85) #what percent of scaffolds to sample at a given time? Here 95%
+
+#do 100 random draws (weighted and without replacement) and create matrix 
+scaff_mat <- matrix(data = NA, nrow = pick, ncol=100) 
+scaff_mat[,1] <- sample(scaffold_list$V1, pick, replace = F, prob = probs)
+for (i in 2:100){
+scaff_mat[,i] <- sample(scaffold_list$V1, pick, replace = F, prob = probs)
+}
+
+#create list of sites contained in the randomly sampled scaffolds
+newsite_list <- list()
+for(i in 1:100){
+  newsite_list[[i]] <- site_list[site_list$V1 %in% scaff_mat[,i],]
+}
+
+#write out new lists for sampled scaffolds and chromosomes
+for (i in 1:100){
+  write.table(scaff_mat[,i], file = paste("random_scaffolds/sampled_chrs_S17465_",i,".txt", sep=''), quote = F, col.names = F, row.names = F)
+  write.table(newsite_list[[i]], file = paste("random_scaffolds/sampled_sites_S17465_",i,".txt", sep=''), quote = F, col.names = F, row.names = F)
+}
+
+#MOVE THESE FILES ONTO TACC
+
+#Also maybe want the distribution of the number of sites? Histogram giving dist. of #sites
+site_nums <- vector()
+for(i in 1:100){
+  site_nums <- c(site_nums, nrow(newsite_list[[i]]))
+}
+hist(site_nums)
+
+#To sample sites:
+pick <- floor(nrow(site_list)*0.85) #what percent of scaffolds to sample at a given time? Here 85%
+sample_list <- list()
+#this chunk of code is pretty slow (~3 mins)
+for (i in 1:100){
+  sample_list[[i]] <- site_list[sample(nrow(site_list), pick, replace =F),]
+  sample_list[[i]] <- sample_list[[i]] %>% separate(V1, into = c("text", "number"), sep = "=", remove = F) %>% mutate(number=as.numeric(number), V2=as.numeric(V2)) %>% arrange(number, V2) 
+ # sample_list[[i]] <- sample_list[[i]][order(sample_list[[i]]$V1, sample_list[[i]]$V2),]
+}
+
+#now let's write out these new site_lists. We'll create the chromosome lists on TACC
+for (i in 1:100){
+  #write.table(sample_list[[i]], file = paste("random_scaffolds/S17464/sampled_sites_S17464_",i,".txt", sep=''), quote = F, col.names = F, row.names = F)
+  write.table(sample_list[[i]], file = paste("sampled_sites_S17466_",i,".txt", sep=''), quote = F, col.names = F, row.names = F)
+  
+}
+
+
+
+table_freqs <- list()
+num_scaffolds <- vector()
+for (i in 1:length(newsite_list)){
+  table_freqs[[i]] <- as.data.frame(table(newsite_list[[i]]$V1))
+  num_scaffolds[i] <- nrow(table_freqs[[i]])
+}
+
+mega_list <- sample_list %>% bind_rows() %>% unite("chr_site", V1:V2, remove = T)
+site_freqs <- table(mega_list$chr_site)
+
+#why is it taking so long??

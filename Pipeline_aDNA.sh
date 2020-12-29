@@ -406,7 +406,7 @@ cat nucl_wgs.accession2taxid tmpfile > nucl_all.accession2taxid
 echo "malt-build --input $SCRATCH/ancientDNA/bact_refgenomes/plantless-malt/* -s DNA --index $SCRATCH/ancientDNA/malt-allmarine --acc2taxonomy $SCRATCH/ancientDNA/bact_refgenomes/NCBI_kraken/taxonomy/nucl_all.accession2taxid --threads 1 --verbose --step 5" > malt_noplant #still ran into a memory error
 ls5_launcher_creator.py -j malt_noplant -n malt_noplant -t 01:00:00 -N 1 -w 1 -a tagmap -e cbscott@utexas.edu -q development #memory error here? this worked!!
 
-rm !(*.fa) #get rid of all not .fa
+rm !(*.fna) #get rid of all not .fa this caused an error!
 #Try to MALT build without plants... is it small enough?
 
 #------------------Examine Damage patterns using PMDtools-----------------------
@@ -513,6 +513,8 @@ for algae in `cat to_delete`; do rm /scratch/06909/cbscott/ancientDNA/bact_refge
 awk '{print $1}' assembly_result-4.txt > accessionNums
 $HOME/datasets download assembly -i accessionNums -f reduced_algae_genomes.zip
 find . -name '*.fna' -exec cp {} $SCRATCH/ancientDNA/bact_refgenomes/plantless-malt \;
+find . -name '*.fna' -exec cp {} $SCRATCH/ancientDNA/bact_refgenomes/malt-ArchInvertProtoMarRefSym \;
+
 
 echo "malt-build --input $SCRATCH/ancientDNA/bact_refgenomes/plantless-malt/* -s DNA --index $SCRATCH/ancientDNA/malt-allmarine --acc2taxonomy $SCRATCH/ancientDNA/bact_refgenomes/NCBI_kraken/taxonomy/nucl_all.accession2taxid --threads 2 --step 15 --verbose" > malt_noplant
 #No mem error after increasing step size... maybe 5 is too big. Try to decrease and refine in the future. AH! Forgot to add back *all* of the algae. If increasing step size seems to work, try adding back.
@@ -562,6 +564,18 @@ ls5_launcher_creator.py -j MEGANviz -n MEGANviz -t 00:05:00 -N 1 -w 1 -a tagmap 
 echo "malt-build --input /scratch/06909/cbscott/ancientDNA/bact_refgenomes/NCBI_kraken/library/MarRef/* -s DNA --index $SCRATCH/ancientDNA/malt-MarRef --acc2taxonomy $SCRATCH/ancientDNA/bact_refgenomes/NCBI_kraken/taxonomy/nucl_all.accession2taxid --threads 1 --step 1 --verbose" > malt_MarRef
 ls5_launcher_creator.py -j malt_MarRef -n malt_MarRef -t 00:30:00 -N 1 -w 1 -a tagmap -e cbscott@utexas.edu -q normal
 
+#Master DB with LARGE stepsize.
+echo "malt-build --input /scratch/06909/cbscott/ancientDNA/bact_refgenomes/malt-ArchInvertProtoMarRefSym/* -s DNA --index $SCRATCH/ancientDNA/malt-master --acc2taxonomy $SCRATCH/ancientDNA/bact_refgenomes/NCBI_kraken/taxonomy/nucl_all.accession2taxid --step 75 --verbose" > malt_master
+ls5_launcher_creator.py -j malt_master -n malt_master -t 01:00:00 -N 1 -w 1 -a tagmap -e cbscott@utexas.edu -q normal
+
+#attempt to reduce memory issues by gzipping FILES
+>gzip_commands
+for file in *.fa; do echo "gzip $file" >> gzip_commands; done
+#parallelize
+ls5_launcher_creator.py -j gzip_commands -n gzip_commands -t 00:10:00 -N 1 -w 24 -a tagmap -e cbscott@utexas.edu -q development
+
+
+
 #What about SILVA?
 
 #deal with database issues: add algae, remove bacteria that nothing mapped to.... try CENTRIFUGE? Uses the entire ncbi nt database. Then pipe into malt_extract
@@ -578,10 +592,10 @@ wget https://ftp.ncbi.nih.gov/pub/taxonomy/taxdump.tar.gz #try this, use nucleot
 gunzip -c taxdump.tar.gz | sed 's/^/gi|/' > gi_taxid_nucl.map
 
 # build index using 16 cores and a small bucket size, which will require less memory (swap out mapping file)
-echo "centrifuge-build -p 16 --bmax 1342177280 --conversion-table all_nucl.accession2taxid \
+echo "centrifuge-build -p 4 --bmax 1342177280 --conversion-table all_nucl.accession2taxid \
                  --taxonomy-tree taxonomy/nodes.dmp --name-table taxonomy/names.dmp \
                  nt.fa nt" > test_centri_build
-ls5_launcher_creator.py -j test_centri_build -n test_centri_build -t 01:00:00 -N 2 -w 8 -a tagmap -e cbscott@utexas.edu -q normal
+ls5_launcher_creator.py -j test_centri_build -n test_centri_build -t 03:00:00 -N 1 -w 4 -a tagmap -e cbscott@utexas.edu -q normal
 
 
 #I think centrifuge will output a .sam file, that can then be converted to an rma6 file and converted for use in MEGAN and HOPS
@@ -594,12 +608,81 @@ ls5_launcher_creator.py -j maps_czoox -n maps_czoox -t 2:00:00 -N 2 -w 24 -a tag
 
 #break it into smaller jobs. That way they sit in queue for less time?
 export GENOME_FASTA=$WORK/ancientDNAdb/Apalm_sym_euk.fasta
->maps_czoox_1
+>maps_czoox_1 #this took about three hours
 for file in *.fastq; do
 echo "bowtie2 --no-unal --score-min L,16,1 --local -L 16 -x $GENOME_FASTA -U $file -S ${file/.fastq/}.sam">>maps_czoox_1; done
-ls5_launcher_creator.py -j maps_czoox_1 -n maps_czoox_1 -t 02:00:00 -N 2 -w 24 -a tagmap -e cbscott@utexas.edu -q normal
+ls5_launcher_creator.py -j maps_czoox_1 -n maps_czoox_1 -t 06:00:00 -N 2 -w 24 -a tagmap -e cbscott@utexas.edu -q normal
 
+#should we play with score min?
 >maps_czoox_2
 for file in *.fastq; do
 echo "samtools sort -O bam -o ${file/.fastq/}.coralzoox.sorted.bam ${file/.fastq/}.sam" >> maps_czoox_2; done
-ls5_launcher_creator.py -j maps_czoox_2 -n maps_czoox_2 -t 00:30:00 -N 1 -w 24 -a tagmap -e cbscott@utexas.edu -q development
+ls5_launcher_creator.py -j maps_czoox_2 -n maps_czoox_2 -t 00:30:00 -N 1 -w 24 -a tagmap -e cbscott@utexas.edu -q development #this is very fast
+
+>maps_czoox_3
+for file in *.fastq; do
+echo "samtools index -c ${file/.fastq/}.coralzoox.sorted.bam " >> maps_czoox_3; done
+ls5_launcher_creator.py -j maps_czoox_3 -n maps_czoox_3 -t 00:30:00 -N 1 -w 24 -a tagmap -e cbscott@utexas.edu -q development #this is also very fast
+
+>pmd_all
+for file in *.coralzoox.sorted.bam; do
+echo "samtools view -h $file| pmdtools.0.60.py --threshold 1.5 --header | samtools view -Sb - > ${file/.bam/}.pmds1_5filter.bam" >> pmd_all; done
+ls5_launcher_creator.py -j pmd_all -n pmd_all -t 00:10:00 -N 1 -w 4 -a tagmap -e cbscott@utexas.edu -q development #this is also very fast
+
+#play with threshold, try to double loop it
+>pmd_all
+for a in 0.5 1.0 1.5 2.0 2.5 3.0 3.5; do
+    for file in *.coralzoox.sorted.bam; do
+    echo "samtools view -h $file| pmdtools.0.60.py --threshold $a --header | samtools view -Sb - > ${file/.bam/}.pmds${a}filter.bam" >> pmd_all;
+  done;
+done;
+ls5_launcher_creator.py -j pmd_all -n pmd_all -t 00:10:00 -N 1 -w 24 -a tagmap -e cbscott@utexas.edu -q normal #this is also very fast
+
+#does this work?
+
+>pmd_all_dist
+for file in *.coralzoox.sorted.bam; do
+echo "samtools view -h $file | pmdtools.0.60.py -p > ${file/.bam/}pmdscores.txt" >> pmd_all_dist; done
+ls5_launcher_creator.py -j pmd_all_dist -n pmd_all_dist -t 00:10:00 -N 1 -w 4 -a tagmap -e cbscott@utexas.edu -q development #this is also very fast
+
+#make sam files
+for file in *coralzoox.sorted.pmds1_5filter.bam; do
+samtools view -h -o $SCRATCH/ancientDNA/rawreads/original_fastq/${file/.bam/}.sam $file; done
+
+#Let's look at the mapping quality:
+for file in *coralzoox.sorted.pmds1_5filter.sam; do
+samtools view $file | awk '{print $5}' > ${file/.sam/}.mapq.txt; done
+
+#how do we set the minq? Let's look at the distribution
+zooxType.pl host="Sc0a5M3_1;HRSCAF=1" minq=20 > zoox_dist_minq20.txt
+
+#play with the different minq's
+for file in *pmds*.*filter*; do
+samtools view -h -o $SCRATCH/ancientDNA/rawreads/original_fastq/pmds_filter_sensitivity/${file/.bam/}.sam $file; done
+
+for qual in 10 15 20 25 30 35 40 45; do
+zooxType.pl host="Sc0a5M3_1;HRSCAF=1" minq=$qual > zoox_dist_${qual}.txt; done
+
+
+#print out quality reports
+for file in *coralzoox.sorted.pmds1_5filter.bam; do
+samtools view $file | pmdtools.0.60.py --deamination > PMD_temp.txt && Rscript /home1/06909/cbscott/PMDtools/plotPMD.v2.R && cp PMD_plot.frag.pdf ${file/.coralzoox.sorted.pmds1_5filter.bam/}_PMD1_5_plot.pdf; done
+
+samtools view S17465.Y1.E1.L1.coralzoox.sorted.bam | python $HOME/PMDtools/pmdtools.0.60.py --deamination > PMD_temp.txt
+
+echo "samtools view S17465.Y1.E1.L1.coralzoox.sorted.bam | python $HOME/PMDtools/pmdtools.0.60.py --platypus --requirebaseq 30 > PMD_temp.txt" > pmd_plotfix
+ls5_launcher_creator.py -j pmd_plotfix -n pmd_plotfix -t 00:10:00 -N 1 -w 1 -a tagmap -e cbscott@utexas.edu -q development #this is also very fast
+
+##------
+#echo "samtools view S17465.Y1.E1.L1.coralzoox.sorted.bam | python $HOME/PMDtools/pmdtools.0.60.py --platypus --requirebaseq 30 > PMD_temp.txt" > pmd_plotfix
+#ls5_launcher_creator.py -j pmd_plotfix -n pmd_plotfix -t 00:10:00 -N 1 -w 1 -a tagmap -e cbscott@utexas.edu -q development #this is also very fast
+
+echo "samtools view S17463.Y1.E1.L1.sam | $HOME/PMDtools/pmdtools.0.60.py --platypus --requirebaseq 30 > PMD_temp1.txt" > pmd_plotfix
+ls5_launcher_creator.py -j pmd_plotfix -n pmd_plotfix -t 00:30:00 -N 1 -w 1 -a tagmap -e cbscott@utexas.edu -q development #this is also very fast
+Rscript /home1/06909/cbscott/PMDtools/plotPMD.v2.R
+
+
+
+&& plotPMD.v2.R && cp PMD_plot.pdf ${file/.coralzoox.sorted.pmds1_5filter.bam/}_PMD1_5_plot.pdf; done
+
+plotPMD.v2.R

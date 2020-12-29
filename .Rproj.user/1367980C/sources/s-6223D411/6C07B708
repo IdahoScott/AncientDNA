@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1609269309715.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "6C07B708",
+    "lastKnownWriteTime" : 1609270941,
+    "last_content_update" : 1609270941670,
+    "path" : "~/Documents/Projects/AncientDNA/scaffold_sampler.R",
+    "project_path" : "scaffold_sampler.R",
+    "properties" : {
+        "cursorPosition" : "57,0",
+        "scrollLine" : "47",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 7,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

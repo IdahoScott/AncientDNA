@@ -1,0 +1,1 @@
+"0","plot(cons_grow(1, 100, 10), type = 'l', main = ""N0=10"", ylim=c(-1, 200)) # original situation"

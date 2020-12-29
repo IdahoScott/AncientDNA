@@ -1,0 +1,3 @@
+"0","for (i in 1:length(trial_lambdas)){"
+"0","  lines(cons_grow(trial_lambdas[i], 100, 2), col = cols[i])"
+"0","}"

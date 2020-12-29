@@ -1,0 +1,3 @@
+"0","for (i in 1:length(trial_Ks)){"
+"0","  lines(disc_log_time(100, 10, .2, trial_Ks[i]), col = cols[i])"
+"0","}"

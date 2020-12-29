@@ -1,0 +1,25 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1603313914258.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1615274256",
+    "id" : "3CD1C93E",
+    "lastKnownWriteTime" : 1609271048,
+    "last_content_update" : 1609271048889,
+    "path" : "~/Documents/Projects/AncientDNA/IBS_analysis.R",
+    "project_path" : "IBS_analysis.R",
+    "properties" : {
+        "cursorPosition" : "174,47",
+        "scrollLine" : "167"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

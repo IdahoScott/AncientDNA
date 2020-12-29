@@ -1,0 +1,1 @@
+"0","plot(cons_grow(1.2, 100, 2), type ='l', main=""Lambda = 1.2, N0=2"")"

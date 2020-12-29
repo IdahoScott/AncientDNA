@@ -1,0 +1,49 @@
+a <- read.table("anc17463test.snp.txt",sep="\t", header=F)
+b <- read.fwf("anc17463test.geno.txt",widths=c(1))
+c <- cbind(a,b)
+for (j in 1:441)
+{
+  c <- cbind(c,b)
+}
+for (j in 1:441)
+{
+  c[which(c[,2]==j),8+(j-1)] <- 9
+}
+c$x <- apply(c[ ,c(7:29)],1,paste, collapse = "")
+d <- c$x
+write.table(d, "test.missing.geno", sep="\t", row.names=F, col.names=F, quote=F)
+#Create a new ind file reflecting changes to each chromosome
+a <- read.table("anc17463test.ind.txt", sep="\t", header=F)
+a$V1 <- as.character(a$V1)
+a$V2 <- as.character(a$V2)
+a$V3 <- as.character(a$V3)
+for (j in 1:441)
+{
+  a <- rbind(a, c(paste(a$V1[1],".",j,sep=""), "U", paste(a$V3[1],".",j,sep="")))
+}
+write.table(a, "test.missing.ind", sep="\t", row.names=F, col.names=F, quote=F)
+#Finally relabel the snp file
+cp anc17463test.snp.txt anc17463test.missing.snp
+#Now we merge this dataset with that of the other samples from modern data
+
+/work/07475/vagheesh/stampede2/software/AdmixTools/bin/mergeit -p /work/07475/vagheesh/stampede2/forOthers/forCarly/parMergeIt
+#First start with PCAs of all the samples in the dataset
+sbatch /work/07475/vagheesh/stampede2/forOthers/forCarly/pcaEastEurasia.sh
+sed 1d /work/07475/vagheesh/stampede2/forOthers/forCarly/v33.1.HO.harappan.evec | tr -s ' ' | sed -e 's/^[ \t]*//' | awk 'NF{NF-=1};1' | awk -v OFS="\t" '$1=$1' | sed -e '1s/^/Sample_ID\tpc1\tpc2\tpc3\tpc4\tpc5\tpc6\tpc7\tpc8\tpc9\tpc10\n/' > /work/07475/vagheesh/stampede2/forOthers/forCarly/v33.1.HO.harappan.evec.txt
+#Now obtain a set of PCA coordinates for just the leave one out samples
+grep I6113 /work/07475/vagheesh/stampede2/forOthers/forCarly/v33.1.HO.harappan.evec.txt | tr -s ' ' | sed -e 's/^[ \t]*//' | cut -f1,2,3 | tail -22 > /work/07475/vagheesh/stampede2/forOthers/forCarly/I6113.pca.txt
+
+#Compute the block jacknife
+a<-read.table("/work/07475/vagheesh/stampede2/forOthers/forCarly/I6113.pca.txt",sep="\t",header=F)
+jackknife <- function(x,print=T)
+{
+  c <- mean(x)
+  d <- 0
+  for (j in 1:length(x))
+  {
+    d<-d + (x[j]-c)*(x[j]-c)
+  }
+  sqrt(d*21/22)
+}
+jackknife(a$V2)
+jackknife(a$V3)

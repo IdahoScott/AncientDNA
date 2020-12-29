@@ -1,0 +1,31 @@
+library(strataG)
+#---------Admixture Plotting----------
+# assembling the input table
+dir="" # path to input files
+inName="mydata17465_k3.qopt" # name of the input file to plot, output of ngsAdmix or ADMIXTURE run
+#pops="inds2pops" # 2-column tab-delimited table of individual assignments to populations; must be in the same order as samples in the bam list or vcf file.
+
+#------------
+
+npops=as.numeric(sub(".+(\\d+)\\..+","\\1",inName))
+tbl=read.table(paste(dir,inName,sep=""),header=F)
+tbl=head(tbl,38)
+i2p=subbed_meta[, c("SRA.Accession", "Species")]
+
+names(i2p)=c("ind","pop")
+tbl=cbind(tbl,i2p)
+row.names(tbl)=tbl$ind
+#head(tbl)
+# putting populaitons in desired order (edit pop names as needed or skip to plot them alphabetically)
+# tbl$pop=factor(tbl$pop,levels=c("O","K"))
+cnames <- vector()
+for (i in 1:npops){
+  cnames[i] <- paste("V", i, sep="")
+}
+
+#---------what I want is a structure plot -----------
+
+mod_tbl <- tbl[,c("pop",cnames)]
+#mod_tbl <- mod_tbl[mod_tbl$pop != "NW",] #remove pop that only has one invididual
+
+structurePlot(mod_tbl, pop.col=1, prob.col = 2, horiz = F)

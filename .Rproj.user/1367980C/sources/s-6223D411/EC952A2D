@@ -1,0 +1,26 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1601587229670.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "746646004",
+    "id" : "EC952A2D",
+    "lastKnownWriteTime" : 1609271174,
+    "last_content_update" : 1609271174600,
+    "path" : "~/Documents/Projects/AncientDNA/plot_aDNA_nice.R",
+    "project_path" : "plot_aDNA_nice.R",
+    "properties" : {
+        "cursorPosition" : "125,27",
+        "scrollLine" : "118",
+        "tempName" : "Untitled1"
+    },
+    "read_only" : false,
+    "read_only_alternatives" : [
+    ],
+    "relative_order" : 4,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}
